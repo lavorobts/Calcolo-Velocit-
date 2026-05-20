@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Validazione Tunnel v10.0</title>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; display: flex; justify-content: center; padding: 20px; }
+        .container { background: white; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.15); max-width: 550px; width: 100%; overflow: hidden; }
+        
+        .tabs { display: flex; background: #37474f; }
+        .tab-btn { flex: 1; padding: 15px; border: none; cursor: pointer; background: #37474f; font-weight: bold; color: #cfd8dc; font-size: 0.9rem; transition: 0.3s; border-bottom: 3px solid transparent; }
+        .tab-btn.active { background: #ffffff; color: #1a73e8; border-bottom: 3px solid #1a73e8; }
+
+        .content { padding: 25px; display: none; }
+        .content.active { display: block; }
+
+        .section { background: #f8fafc; padding: 15px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #e2e8f0; }
+        .section-title { font-size: 0.7rem; color: #1a73e8; text-transform: uppercase; margin-bottom: 10px; font-weight: bold; }
+        
+        label { display: block; font-size: 0.85rem; margin-bottom: 5px; font-weight: 600; color: #334155; }
+        input { width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box; font-size: 1rem; margin-bottom: 10px; }
+        input:focus { border-color: #1a73e8; outline: none; box-shadow: 0 0 5px rgba(26,115,232,0.2); background: #fffde7; }
+        
+        .time-row { display: flex; gap: 8px; }
+        .time-row div { flex: 1; text-align: center; }
+        .time-row label { font-size: 0.7rem; color: #64748b; }
+
+        button.calc-btn { width: 100%; padding: 15px; background: #1a73e8; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 1rem; font-weight: bold; margin-top: 10px; }
+        
+        .results { margin-top: 20px; padding: 15px; background: #ffffff; border: 2px solid #1a73e8; border-radius: 8px; }
+        .res-group { margin-bottom: 15px; border-bottom: 1px solid #eee; padding-bottom: 10px; }
+        .res-group:last-child { border-bottom: none; margin-bottom: 0; }
+        .res-line { display: flex; justify-content: space-between; align-items: baseline; }
+        .res-label { font-size: 0.9rem; color: #444; }
+        .val { font-weight: bold; color: #1e293b; font-size: 1.1rem; }
+        .formula-hint { font-family: monospace; font-size: 0.75rem; color: #1a73e8; display: block; margin-top: 4px; background: #f0f7ff; padding: 2px 6px; border-radius: 4px; }
+        .time-val { color: #d32f2f; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="tabs">
+        <button class="tab-btn active" onclick="openTab(event, 'tab1')">Tempo/Metro</button>
+        <button class="tab-btn" onclick="openTab(event, 'tab2')">Velocità Diretta</button>
+    </div>
+
+    <div style="padding: 25px 25px 0 25px;">
+        <div class="section">
+            <label>Lunghezza Zona Calda (mm):</label>
+            <input type="number" id="L_global" value="1620" class="next-on-enter" onfocus="this.select()">
+            <label>Velocità HMI impostata (mm/min):</label>
+            <input type="number" id="vHMI_global" value="320" class="next-on-enter" onfocus="this.select()">
+        </div>
+    </div>
+
+    <div id="tab1" class="content active">
+        <div class="section">
+            <div class="section-title">Rilevazione su 1 Metro</div>
+            <div class="time-row">
+                <div><label>Min</label><input type="number" id="m1" value="0" class="next-on-enter" onfocus="this.select()"></div>
+                <div><label>Sec</label><input type="number" id="s1" value="0" class="next-on-enter" onfocus="this.select()"></div>
+                <div><label>Cent</label><input type="number" id="c1" value="0" class="calc-on-enter" data-target="btn1" onfocus="this.select()"></div>
+            </div>
+        </div>
+        <button id="btn1" class="calc-btn" onclick="calcolaTab1()">CALCOLA</button>
+        <div id="res1" class="results" style="display:none;"></div>
+    </div>
+
+    <div id="tab2" class="content">
+        <div class="section">
+            <div class="section-title">Inserimento Manuale</div>
+            <label>Velocità Reale Rilevata (mm/min):</label>
+            <input type="number" id="vReal2" step="0.01" placeholder="es. 317.46" class="calc-on-enter" data-target="btn2" onfocus="this.select()">
+        </div>
+        <button id="btn2" class="calc-btn" onclick="calcolaTab2()">CALCOLA</button>
+        <div id="res2" class="results" style="display:none;"></div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('keydown', function(event) {
+        if (event.key === 'Enter') {
+            event.preventDefault();
+            const activeElem = document.activeElement;
+            if (activeElem.classList.contains('next-on-enter')) {
+                const inputs = Array.from(document.querySelectorAll('input:not([type="hidden"])'));
+                const visibleInputs = inputs.filter(i => i.offsetParent !== null);
+                const index = visibleInputs.indexOf(activeElem);
+                if (index > -1 && index < visibleInputs.length - 1) {
+                    visibleInputs[index + 1].focus();
+                }
+            } else if (activeElem.classList.contains('calc-on-enter')) {
+                const targetBtnId = activeElem.getAttribute('data-target');
+                document.getElementById(targetBtnId).click();
+            }
+        }
+    });
+
+    function openTab(evt, tabName) {
+        let content = document.getElementsByClassName("content");
+        for (let i = 0; i < content.length; i++) content[i].classList.remove("active");
+        let tabbtns = document.getElementsByClassName("tab-btn");
+        for (let i = 0; i < tabbtns.length; i++) tabbtns[i].classList.remove("active");
+        document.getElementById(tabName).classList.add("active");
+        evt.currentTarget.classList.add("active");
+    }
+
+    function formatTime(decimalMinutes) {
+        let totalSeconds = Math.round(decimalMinutes * 60 * 100) / 100;
+        let mins = Math.floor(totalSeconds / 60);
+        let secs = Math.floor(totalSeconds % 60);
+        let cents = Math.round((totalSeconds % 1) * 100);
+        return String(mins).padStart(2,'0')+":"+String(secs).padStart(2,'0')+":"+String(cents).padStart(2,'0');
+    }
+
+    function renderRes(divId, vCalc, tAttrav, vHMI, L) {
+        let tTeorico = L / vHMI;
+        let errPerc = ((vCalc - vHMI) / vHMI) * 100;
+        let errMin = tAttrav - tTeorico;
+        
+        document.getElementById(divId).innerHTML = `
+            <div class="res-group">
+                <div class="res-line"><span class="res-label">Velocità Reale:</span> <span class="val">${vCalc.toFixed(2)} mm/min</span></div>
+                <span class="formula-hint">F: Valore inserito / misurato</span>
+            </div>
+            <div class="res-group">
+                <div class="res-line"><span class="res-label">Attraversamento:</span> <span class="val time-val">${formatTime(tAttrav)}</span></div>
+                <span class="formula-hint">F: ${L} / ${vCalc.toFixed(2)} (Distanza / Velocità)</span>
+            </div>
+            <div class="res-group">
+                <div class="res-line"><span class="res-label">Errore Lineare:</span> <span class="val">${Math.abs(errPerc).toFixed(2)} %</span></div>
+                <span class="formula-hint">F: ((|${vCalc.toFixed(2)} - ${vHMI}|) / ${vHMI}) * 100</span>
+            </div>
+            <div class="res-group">
+                <div class="res-line"><span class="res-label">Errore Temporale:</span> <span class="val">${Math.abs(errMin).toFixed(3)} min</span></div>
+                <span class="formula-hint">F: |${tAttrav.toFixed(4)} - ${tTeorico.toFixed(4)}| (Reale - Teorico)</span>
+            </div>
+        `;
+        document.getElementById(divId).style.display = 'block';
+    }
+
+    function calcolaTab1() {
+        let L = parseFloat(document.getElementById('L_global').value);
+        let vHMI = parseFloat(document.getElementById('vHMI_global').value);
+        let m = parseFloat(document.getElementById('m1').value) || 0;
+        let s = parseFloat(document.getElementById('s1').value) || 0;
+        let c = parseFloat(document.getElementById('c1').value) || 0;
+        let tDec = m + (s/60) + (c/6000);
+        let vCalc = 1000 / tDec;
+        renderRes('res1', vCalc, L/vCalc, vHMI, L);
+    }
+
+    function calcolaTab2() {
+        let L = parseFloat(document.getElementById('L_global').value);
+        let vHMI = parseFloat(document.getElementById('vHMI_global').value);
+        let vReal = parseFloat(document.getElementById('vReal2').value);
+        renderRes('res2', vReal, L/vReal, vHMI, L);
+    }
+</script>
+</body>
+</html>
